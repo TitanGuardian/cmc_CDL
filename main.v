@@ -20,7 +20,7 @@ module main (clk, rst, in, op, apply, head, empty, valid);
     assign has1 = size>=1;
      
     assign empty = size == 0;
-    assign head = has1 ? stack[size-1] : 0;
+    assign head = has1 ? stack[size-1] : {W{1'bx}};
     
     always @(posedge clk, posedge rst) begin
         if (rst) begin
