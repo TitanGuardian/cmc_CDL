@@ -122,28 +122,22 @@ module control_path(on, start, regime, active, y_select_next, s_step, y_en, s_en
   
   // управляющие выходы для  операционного автомата 
   
-  //процедуры для каждого состояния  
-  always @* 
-    if (state == STATE_OFF) begin
-      y_en = 0;
-      s_en = 0;
-    end
+//процедуры для каждого состояния -----> процедуры для групп выходов;
   
-  always @* begin 
-    if (state == STATE_ENUM_ACTIV) begin
-      y_en = 0;
-      s_en = 0;
-      s_add = 1;
+  
+  //процедура для y_en, s_en;
+  
+  
+  always @* begin
+    y_en = 0; s_en=0;
+    case (state) 
+    STATE_ENUM_ACTIV:
       case (counter16)
       5'd16: begin
-        s_step = 2'd1; 
-        s_zero = 1;
         s_en = 1;
       end
       5'd12: begin
         s_en = 1;
-        s_step = 2'd2;
-        s_zero = 0;
       end
       5'd8: begin
         s_en = 1;
@@ -153,56 +147,92 @@ module control_path(on, start, regime, active, y_select_next, s_step, y_en, s_en
       end
       5'd0: begin
         s_en = 1;
+      end
+      endcase
+    
+    STATE_COUNT: 
+      if (start)
+        begin
+        s_en = 1;
+        if (s_is_zero)
+          y_en = 1;
+        end
+
+    STATE_REFRESH:
+      case (counter3) 
+      2'd2: y_en=1;
+      2'd1: begin
+        s_en = 1;
+        y_en = 1;
+      end
+      endcase
+    endcase
+  end
+  
+  //процедура для s_step, s_add, s_zero
+  always @* begin
+    s_step = 0; s_add=0; s_zero = 0;
+    case (state) 
+    STATE_ENUM_ACTIV:  begin
+      s_add = 1;
+      case (counter16)
+      5'd16: begin
+        s_step = 2'd1; 
+        s_zero = 1;
+      end
+      5'd12: begin
+        s_step = 2'd2;
+      end
+      5'd8: begin
+        s_step = 2'd2;
+      end
+      5'd4: begin
+        s_step = 2'd2;
+      end
+      5'd0: begin
         s_zero = 1;
         s_step = 1;
       end
       endcase
     end
+    
+    STATE_COUNT:
+      if (start)
+        s_step = 2'd1;
+    
+    
+    STATE_REFRESH:
+      case (counter3) 
+      2'd1: begin
+        s_step = 1;
+        s_add = 1;
+      end
+      endcase
+    endcase
   end
   
-  
-  always @* 
-    if (state == STATE_COUNT) 
+  // процедура для y_select_next и y_store_x
+  always @* begin
+    y_select_next = 0; y_store_x = 0;
+    case (state) 
+ 
+    STATE_COUNT:
       if (start)
-        begin
-        y_store_x = 0;
-        s_step = 2'd1;
-        s_en = 1;
-        s_add = 0;
-        s_zero=0;
-        if (s_is_zero) begin 
-          y_en = 1;
+        if (s_is_zero)
           y_select_next = 2'd1;
-        end
-        else
-          y_en = 0 ;
-        end
-      else begin
-        s_en = 0;
-        y_en = 0;
-      end
-    
-  always @* 
-    if (state == STATE_REFRESH)
+
+    STATE_REFRESH:
       case (counter3) 
       2'd2: begin
-        y_en=1;
-        s_en=0;
         y_store_x = 1;
       end
       2'd1: begin
-        s_en = 1;
-        s_step = 1;
-        s_add = 1;
-        y_en = 1;
-        y_store_x = 0 ;
         y_select_next = 2'd3; 
       end
-      2'd0: begin
-        y_en =0;
-        s_en = 0;
-      end
       endcase
-    
-  
+    endcase
+  end
+
 endmodule
+
+
